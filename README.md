@@ -1,3 +1,8 @@
+A fork of hamelin. Changes: Added python 3 folder. Converted with 2to3.
+
+
+Original ReadMe:
+"""
 Hamelin
 =======
 
@@ -103,3 +108,4 @@ Additional environment variables MAY be set depending on the daemon type. All
 Finally, the daemon MUST pass along user-specified command-line arguments to
 the server *unchanged*, to provide the user with a means to modify the behavior
 of a server script without editing it.
+"""
