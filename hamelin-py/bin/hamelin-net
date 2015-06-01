@@ -36,7 +36,10 @@ class netdaemon(hamelin.daemon):
                 serv.kill()
 
         def quit(code):
-            conn.shutdown(socket.SHUT_RDWR)
+            try:
+                conn.shutdown(socket.SHUT_RDWR)
+            except error:
+                print "Client disconnected."
             conn.close()
 
         serv.handle_data = recv
