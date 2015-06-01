@@ -52,7 +52,7 @@ class netdaemon(hamelin.daemon):
         def quit(code):
             try:
                 conn.shutdown(socket.SHUT_RDWR)
-            except:
+            except: # If the above fails, it's probably because of a closed connection (listed as "error", no 107, but I tried "except error:" and it didn't work, so I'll just assume that if an error occurs on this exact line, and this exact block was called, then it was a client disconnection).
                 print "Client disconnected (probably a ^C)."
             conn.close()
 
