@@ -6,6 +6,7 @@ import sys
 import time
 import threading
 
+servExistsYet = False
 
 class netdaemon(hamelin.daemon):
     def run(self, host='', port=8080):
@@ -14,8 +15,19 @@ class netdaemon(hamelin.daemon):
         s.bind((host, port))
         s.listen(5)
         while True:
-            time.sleep(0)
-            accepted = s.accept()
+            time.sleep(0.1) # Increased time.sleep(0) to time.sleep(0.1). Otherwise, it doesn't actually rest.
+            try:
+                accepted = s.accept()
+            except KeyboardInterrupt: # KeyboardInterrupts were occuring here mainly, and not in the other location, so I put an exception here.
+                if servExistsYet:
+                    if serv.alive:
+                        serv.kill()
+                        print "\nYikes. Shutting down server." # The \n is here so that it doesn't print it right after the ^C.
+                    else:
+                        print "\nYikes." # The \n is here so that it doesn't print it right after the ^C.
+                else:
+                    print "\nYikes." # The \n is here so that it doesn't print it right after the ^C.
+                break
             t = threading.Thread(
                 target = self.server_loop,
                 args   = accepted,
@@ -23,10 +35,12 @@ class netdaemon(hamelin.daemon):
             t.start()
 
     def server_loop(self, conn, add):
+        global serv # This way, we can shut it down if we ever need to from the run() function on a keyboard interrupt.
         serv = self.create_server({
             'H-VERSION': 'HAMELIN.PY-NET-0.1',
             'H-CLIENT': "{0}:{1}".format(add[0], add[1])
         })
+        servExistsYet = True
 
         def recv(text):
             try:
@@ -38,7 +52,7 @@ class netdaemon(hamelin.daemon):
         def quit(code):
             try:
                 conn.shutdown(socket.SHUT_RDWR)
-            except error:
+            except:
                 print "Client disconnected."
             conn.close()
 
@@ -63,7 +77,7 @@ class netdaemon(hamelin.daemon):
                 serv.kill()
                 break
             except KeyboardInterrupt:
-                print "Yikes."
+                print "\nYikes. Shutting down server." # The \n is here so that it doesn't print it right after the ^C.
                 serv.kill()
                 break
 
