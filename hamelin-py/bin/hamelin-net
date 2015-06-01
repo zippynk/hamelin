@@ -53,7 +53,7 @@ class netdaemon(hamelin.daemon):
             try:
                 conn.shutdown(socket.SHUT_RDWR)
             except:
-                print "Client disconnected."
+                print "Client disconnected (probably a ^C)."
             conn.close()
 
         serv.handle_data = recv
