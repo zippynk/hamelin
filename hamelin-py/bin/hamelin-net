@@ -72,13 +72,9 @@ def main():
     host = sys.argv[1]
     port = int(sys.argv[2])
     args = sys.argv[3:]
-    global mainNetdaemon
     mainNetdaemon = netdaemon(args)
-    mainNetdaemon.run(host=host, port=port)
-
-if __name__ == '__main__':
     try:
-        main()
+        mainNetdaemon.run(host=host, port=port)
     except KeyboardInterrupt:
         if "serv" in inspect.getmembers(mainNetdaemon):
             if mainNetdaemon.serv.alive:
@@ -88,3 +84,6 @@ if __name__ == '__main__':
                 print "\nYikes." # The \n is here so that it doesn't print it right after the ^C.
         else:
             print "\nYikes." # The \n is here so that it doesn't print it right after the ^C
+
+if __name__ == '__main__':
+    main()
