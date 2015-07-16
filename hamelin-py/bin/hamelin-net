@@ -6,8 +6,6 @@ import sys
 import time
 import threading
 
-servExistsYet = False
-
 class netdaemon(hamelin.daemon):
     def run(self, host='', port=8080):
         print "Running at host %s on port %d" % (host, port)
@@ -15,19 +13,7 @@ class netdaemon(hamelin.daemon):
         s.bind((host, port))
         s.listen(5)
         while True:
-            time.sleep(0.1) # Increased time.sleep(0) to time.sleep(0.1). Otherwise, it doesn't actually rest.
-            try:
-                accepted = s.accept()
-            except KeyboardInterrupt: # KeyboardInterrupts were occuring here mainly, and not in the other location, so I put an exception here.
-                if servExistsYet:
-                    if serv.alive:
-                        serv.kill()
-                        print "\nYikes. Shutting down server." # The \n is here so that it doesn't print it right after the ^C.
-                    else:
-                        print "\nYikes." # The \n is here so that it doesn't print it right after the ^C.
-                else:
-                    print "\nYikes." # The \n is here so that it doesn't print it right after the ^C.
-                break
+            accepted = s.accept()
             t = threading.Thread(
                 target = self.server_loop,
                 args   = accepted,
@@ -35,50 +21,45 @@ class netdaemon(hamelin.daemon):
             t.start()
 
     def server_loop(self, conn, add):
-        global serv # This way, we can shut it down if we ever need to from the run() function on a keyboard interrupt.
-        serv = self.create_server({
+        self.serv = self.create_server({
             'H-VERSION': 'HAMELIN.PY-NET-0.1',
             'H-CLIENT': "{0}:{1}".format(add[0], add[1])
         })
-        servExistsYet = True
 
         def recv(text):
             try:
                 conn.sendall(text)
             except socket.error:
                 print "Write failed with error. Killing server."
-                serv.kill()
+                self.serv.kill()
 
         def quit(code):
             try:
                 conn.shutdown(socket.SHUT_RDWR)
-            except: # If the above fails, it's probably because of a closed connection (listed as "error", no 107, but I tried "except error:" and it didn't work, so I'll just assume that if an error occurs on this exact line, and this exact block was called, then it was a client disconnection).
-                print "Client disconnected (probably a ^C)."
+            except socket.error as err:
+                if err.errno == errno.ENOTCONN:
+                    print "Client disconnected (probably a ^C)."
             conn.close()
 
-        serv.handle_data = recv
-        serv.handle_quit = quit
-        serv.startup()
+        self.serv.handle_data = recv
+        self.serv.handle_quit = quit
+        self.serv.startup()
         buf = ""
-        while serv.alive:
+        while self.serv.alive:
             try:
                 d = conn.recv(4096)
                 buf += d
                 if len(d) == 0:
-                    serv.eof()
+                    self.serv.eof()
                     return
                 if "\n" in buf:
                     line, buf = buf.split("\n", 1)
-                    serv.send(line + "\n")
+                    self.serv.send(line + "\n")
             except socket.error as err:
                 if err.errno == errno.ECONNRESET:
                     print "Connection reset."
                 print "Oh no, the socket died and threw an error."
-                serv.kill()
-                break
-            except KeyboardInterrupt:
-                print "\nYikes. Shutting down server." # The \n is here so that it doesn't print it right after the ^C.
-                serv.kill()
+                self.serv.kill()
                 break
 
 
@@ -90,7 +71,18 @@ def main():
     host = sys.argv[1]
     port = int(sys.argv[2])
     args = sys.argv[3:]
-    netdaemon(args).run(host=host, port=port)
+    mainNetdaemon = netdaemon(args)
+    mainNetdaemon.run(host=host, port=port)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        if "serv" in globals().keys():
+            if mainNetdaemon.serv.alive:
+                mainNetdaemon.serv.kill()
+                print "\nYikes. Shutting down server." # The \n is here so that it doesn't print it right after the ^C.
+            else:
+                print "\nYikes." # The \n is here so that it doesn't print it right after the ^C.
+        else:
+            print "\nYikes." # The \n is here so that it doesn't print it right after the ^C
