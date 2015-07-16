@@ -5,6 +5,7 @@ import socket
 import sys
 import time
 import threading
+import inspect
 
 class netdaemon(hamelin.daemon):
     def run(self, host='', port=8080):
@@ -71,6 +72,7 @@ def main():
     host = sys.argv[1]
     port = int(sys.argv[2])
     args = sys.argv[3:]
+    global mainNetdaemon
     mainNetdaemon = netdaemon(args)
     mainNetdaemon.run(host=host, port=port)
 
@@ -78,7 +80,7 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        if "serv" in globals().keys():
+        if "serv" in inspect.getmembers(mainNetdaemon):
             if mainNetdaemon.serv.alive:
                 mainNetdaemon.serv.kill()
                 print "\nYikes. Shutting down server." # The \n is here so that it doesn't print it right after the ^C.
